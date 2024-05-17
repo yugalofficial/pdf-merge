@@ -28,16 +28,18 @@ Welcome to the Yugal PDF Merge Tool! This tool allows you to easily merge multip
 
 3. **Merge PDFs**:
    - Click the "Merge PDFs" button to combine the files into a single PDF document.
+   
+   ![Merge PDFs](https://yugalofficial.github.io/pdf-merge/screenshot4.png)
 
 4. **Rename Merged File**:
    - Enter a new name for the merged PDF file in the input field.
 
-   ![Rename Merged File](https://yugalofficial.github.io/pdf-merge/screenshot4.png)
+   ![Rename Merged File](https://yugalofficial.github.io/pdf-merge/screenshot5.png)
 
 5. **Download Merged PDF**:
    - Click the "Download Merged PDF" button to save the merged file with the specified name.
 
-   ![Download Merged PDF](https://yugalofficial.github.io/pdf-merge/screenshot5.png)
+   ![Download Merged PDF](https://yugalofficial.github.io/pdf-merge/screenshot6.png)
 
 ## Contributing
 

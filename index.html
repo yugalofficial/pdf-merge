@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yugal PDF Merge Tool</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f2f5;
+        }
+
+        header, footer {
+            background-color: #007bff;
+            color: white;
+            text-align: center;
+            padding: 15px 0;
+        }
+
+        header h1, footer p {
+            margin: 0;
+        }
+
+        .container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 24px;
+            color: #333;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-label {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .file-label:hover {
+            background-color: #0056b3;
+        }
+
+        .file-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+            text-align: left;
+        }
+
+        .file-list li {
+            padding: 10px;
+            background: #f9f9f9;
+            margin-bottom: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .file-list button {
+            background: none;
+            border: none;
+            color: #007bff;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        #renameSection {
+            margin-top: 20px;
+        }
+
+        input[type="text"] {
+            padding: 10px;
+            width: calc(100% - 22px);
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Yugal PDF Merge Tool</h1>
+    </header>
+    <div class="container">
+        <div class="content">
+            <h2>Merge Your PDFs</h2>
+            <label for="pdfFiles" class="file-label">Select PDF Files</label>
+            <input type="file" id="pdfFiles" multiple accept="application/pdf">
+            <ul class="file-list" id="fileList"></ul>
+            <button id="mergeButton">Merge PDFs</button>
+            <div id="renameSection" style="display: none;">
+                <input type="text" id="fileName" placeholder="Enter new file name">
+                <button id="downloadButton">Download Merged PDF</button>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <p>&copy; 2024 Yugal PDF Merge Tool</p>
+    </footer>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script>
+        const fileInput = document.getElementById('pdfFiles');
+        const fileList = document.getElementById('fileList');
+        let filesArray = [];
+
+        fileInput.addEventListener('change', () => {
+            fileList.innerHTML = '';
+            filesArray = Array.from(fileInput.files);
+            filesArray.forEach((file, index) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = file.name;
+
+                const upButton = document.createElement('button');
+                upButton.textContent = '↑';
+                upButton.onclick = () => moveFile(index, -1);
+
+                const downButton = document.createElement('button');
+                downButton.textContent = '↓';
+                downButton.onclick = () => moveFile(index, 1);
+
+                listItem.appendChild(upButton);
+                listItem.appendChild(downButton);
+                fileList.appendChild(listItem);
+            });
+        });
+
+        function moveFile(index, direction) {
+            const targetIndex = index + direction;
+            if (targetIndex < 0 || targetIndex >= filesArray.length) return;
+
+            const temp = filesArray[index];
+            filesArray[index] = filesArray[targetIndex];
+            filesArray[targetIndex] = temp;
+
+            updateFileList();
+        }
+
+        function updateFileList() {
+            fileList.innerHTML = '';
+            filesArray.forEach((file, index) => {
+                const listItem = document.createElement('li');
+                listItem.textContent = file.name;
+
+                const upButton = document.createElement('button');
+                upButton.textContent = '↑';
+                upButton.onclick = () => moveFile(index, -1);
+
+                const downButton = document.createElement('button');
+                downButton.textContent = '↓';
+                downButton.onclick = () => moveFile(index, 1);
+
+                listItem.appendChild(upButton);
+                listItem.appendChild(downButton);
+                fileList.appendChild(listItem);
+            });
+        }
+
+        document.getElementById('mergeButton').addEventListener('click', async () => {
+            if (filesArray.length === 0) {
+                alert('Please select at least one PDF file.');
+                return;
+            }
+
+            const mergedPdf = await PDFLib.PDFDocument.create();
+            for (let file of filesArray) {
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+                copiedPages.forEach(page => mergedPdf.addPage(page));
+            }
+
+            const mergedPdfBytes = await mergedPdf.save();
+            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+
+            document.getElementById('renameSection').style.display = 'block';
+            document.getElementById('downloadButton').onclick = () => {
+                const newFileName = document.getElementById('fileName').value || 'merged.pdf';
+                saveAs(blob, newFileName);
+            };
+        });
+    </script>
+</body>
+</html>

@@ -63,6 +63,23 @@ We welcome contributions to enhance the Yugal PDF Merge Tool. Please fork the re
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
+## Live Demo
+
+You can access the live version of the tool here: [Yugal PDF Merge Tool](https://yugalofficial.github.io/pdf-merge/)
+
+## Contributing
+
+We welcome contributions! If you have suggestions or improvements, feel free to create a pull request or open an issue.
+
+## License
+
+This project is licensed under the MIT License.
+
+---
+
+**Developed by Yugal**
+
+
 ## Acknowledgments
 
 - [PDF-Lib](https://pdf-lib.js.org/) for handling PDF manipulation.
@@ -75,3 +92,5 @@ For any questions or feedback, please reach out to [Yugal](https://github.com/yu
 ---
 
 Thank you for using the Yugal PDF Merge Tool! We hope it makes your PDF merging tasks easier and more efficient.
+
+

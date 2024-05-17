@@ -39,22 +39,6 @@ Welcome to the Yugal PDF Merge Tool! This tool allows you to easily merge multip
 
    ![Download Merged PDF](https://yugalofficial.github.io/pdf-merge/screenshot5.png)
 
-## Screenshots
-
-Here are some screenshots of the Yugal PDF Merge Tool in action:
-
-1. **Main Interface**:
-   ![Main Interface](https://yugalofficial.github.io/pdf-merge/screenshot1.png)
-
-2. **Uploading Files**:
-   ![Uploading Files](https://yugalofficial.github.io/pdf-merge/screenshot2.png)
-
-3. **Reordering Files**:
-   ![Reordering Files](https://yugalofficial.github.io/pdf-merge/screenshot3.png)
-
-4. **Renaming and Downloading Merged File**:
-   ![Renaming and Downloading Merged File](https://yugalofficial.github.io/pdf-merge/screenshot4.png)
-
 ## Contributing
 
 We welcome contributions to enhance the Yugal PDF Merge Tool. Please fork the repository, make your changes, and submit a pull request.
@@ -62,23 +46,6 @@ We welcome contributions to enhance the Yugal PDF Merge Tool. Please fork the re
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
-## Live Demo
-
-You can access the live version of the tool here: [Yugal PDF Merge Tool](https://yugalofficial.github.io/pdf-merge/)
-
-## Contributing
-
-We welcome contributions! If you have suggestions or improvements, feel free to create a pull request or open an issue.
-
-## License
-
-This project is licensed under the MIT License.
-
----
-
-**Developed by Yugal**
-
 
 ## Acknowledgments
 
@@ -92,5 +59,3 @@ For any questions or feedback, please reach out to [Yugal](https://github.com/yu
 ---
 
 Thank you for using the Yugal PDF Merge Tool! We hope it makes your PDF merging tasks easier and more efficient.
-
-

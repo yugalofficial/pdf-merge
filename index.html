@@ -1,228 +1,314 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-bs-theme="light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yugal PDF Merge Tool</title>
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f2f5;
-        }
-
-        header, footer {
-            background-color: #007bff;
-            color: white;
-            text-align: center;
-            padding: 15px 0;
-        }
-
-        header h1, footer p {
-            margin: 0;
-        }
-
-        .container {
-            flex: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .content {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
-            width: 100%;
-            text-align: center;
-        }
-
-        h2 {
-            margin-bottom: 20px;
-            font-size: 24px;
-            color: #333;
-        }
-
-        input[type="file"] {
-            display: none;
-        }
-
-        .file-label {
-            display: block;
-            margin: 10px 0;
-            padding: 10px;
-            background-color: #007bff;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        .file-label:hover {
-            background-color: #0056b3;
-        }
-
-        .file-list {
-            list-style: none;
-            padding: 0;
-            margin: 10px 0;
-            text-align: left;
-        }
-
-        .file-list li {
-            padding: 10px;
-            background: #f9f9f9;
-            margin-bottom: 5px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .file-list button {
-            background: none;
-            border: none;
-            color: #007bff;
-            cursor: pointer;
-            font-size: 16px;
-        }
-
-        #renameSection {
-            margin-top: 20px;
-        }
-
-        input[type="text"] {
-            padding: 10px;
-            width: calc(100% - 22px);
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            margin-bottom: 10px;
-        }
-
-        button {
-            padding: 10px 20px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s ease;
-        }
-
-        button:hover {
-            background-color: #0056b3;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Yugal PDF Merge Tool</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <style>
+    .drop-zone {
+      border: 2px dashed var(--bs-border-color);
+      border-radius: 12px;
+      padding: 50px;
+      text-align: center;
+      transition: background 0.3s;
+    }
+    .drop-zone.dragover {
+      background-color: rgba(var(--bs-primary-rgb), 0.1);
+    }
+    .file-item:hover {
+      background-color: var(--bs-light-bg-subtle);
+    }
+    .page-selector {
+      width: 120px;
+      font-size: 0.9em;
+    }
+    .serial-number {
+      width: 30px;
+      text-align: center;
+      color: var(--bs-secondary);
+      font-weight: 500;
+    }
+  </style>
 </head>
-<body>
-    <header>
-        <h1>Yugal PDF Merge Tool</h1>
-    </header>
-    <div class="container">
-        <div class="content">
-            <h2>Merge Your PDFs</h2>
-            <label for="pdfFiles" class="file-label">Select PDF Files</label>
-            <input type="file" id="pdfFiles" multiple accept="application/pdf">
-            <ul class="file-list" id="fileList"></ul>
-            <button id="mergeButton">Merge PDFs</button>
-            <div id="renameSection" style="display: none;">
-                <input type="text" id="fileName" placeholder="Enter new file name">
-                <button id="downloadButton">Download Merged PDF</button>
-            </div>
+<body class="container py-5">
+
+  <!-- Theme Toggle -->
+  <button class="btn btn-outline-secondary theme-toggle">
+    <i class="bi bi-moon-stars-fill"></i>
+  </button>
+
+  <h1 class="mb-4 text-center fw-bold">Yugal PDF Merge Tool</h1>
+
+  <!-- File Drop Zone -->
+  <div id="dropZone" class="drop-zone mb-4">
+    <p class="lead mb-0">Drag & Drop PDF Files Here or <label for="fileInput" class="btn btn-outline-primary btn-sm">Browse</label></p>
+    <input type="file" id="fileInput" multiple accept="application/pdf" hidden>
+  </div>
+
+  <!-- File Info -->
+  <div class="d-flex justify-content-between mb-3">
+    <small id="totalSize" class="text-muted">Total size: 0 MB</small>
+  </div>
+
+  <!-- File List -->
+  <div id="fileList" class="mb-4"></div>
+
+  <!-- Controls -->
+  <button id="mergeBtn" class="btn btn-success mb-3 w-100">
+    <i class="bi bi-arrow-bar-down me-2"></i>Merge PDFs
+  </button>
+
+  <!-- Progress Bar -->
+  <div class="progress mb-4" style="height: 20px; display: none;" id="progressBarWrapper">
+    <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" style="width: 0%">0%</div>
+  </div>
+
+  <!-- Rename Modal -->
+  <div class="modal fade" id="renameModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Name Your Merged PDF</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
+        <div class="modal-body">
+          <input type="text" id="pdfNameInput" class="form-control" value="merged.pdf" />
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-primary" id="downloadBtn">Download</button>
+        </div>
+      </div>
     </div>
-    <footer>
-        <p>&copy; 2024 Yugal PDF Merge Tool</p>
-    </footer>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-    <script>
-        const fileInput = document.getElementById('pdfFiles');
-        const fileList = document.getElementById('fileList');
-        let filesArray = [];
+  </div>
 
-        fileInput.addEventListener('change', () => {
-            fileList.innerHTML = '';
-            filesArray = Array.from(fileInput.files);
-            filesArray.forEach((file, index) => {
-                const listItem = document.createElement('li');
-                listItem.textContent = file.name;
+  <!-- Toast Container -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+    <div id="toastContainer" class="toast-container"></div>
+  </div>
 
-                const upButton = document.createElement('button');
-                upButton.textContent = '↑';
-                upButton.onclick = () => moveFile(index, -1);
+  <!-- History -->
+  <h5 class="mt-4">Merge History</h5>
+  <ul id="historyList" class="list-group mb-5"></ul>
 
-                const downButton = document.createElement('button');
-                downButton.textContent = '↓';
-                downButton.onclick = () => moveFile(index, 1);
+  <!-- Footer -->
+  <footer class="text-center py-3 text-muted">
+    &copy; <span id="currentYear"></span> Yugal PDF Merge Tool | 
+    <a href="https://www.linkedin.com/in/yugalofficial" target="_blank" class="text-decoration-none">Created by Yugal</a>
+  </footer>
 
-                listItem.appendChild(upButton);
-                listItem.appendChild(downButton);
-                fileList.appendChild(listItem);
-            });
-        });
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script>
+    // DOM Elements
+    const elements = {
+      dropZone: document.getElementById("dropZone"),
+      fileInput: document.getElementById("fileInput"),
+      fileList: document.getElementById("fileList"),
+      mergeBtn: document.getElementById("mergeBtn"),
+      totalSize: document.getElementById("totalSize"),
+      progressBar: document.getElementById("progressBar"),
+      progressWrapper: document.getElementById("progressBarWrapper"),
+      historyList: document.getElementById("historyList"),
+      themeToggle: document.querySelector('.theme-toggle'),
+      currentYear: document.getElementById('currentYear')
+    };
 
-        function moveFile(index, direction) {
-            const targetIndex = index + direction;
-            if (targetIndex < 0 || targetIndex >= filesArray.length) return;
+    // State
+    let pdfFiles = [];
 
-            const temp = filesArray[index];
-            filesArray[index] = filesArray[targetIndex];
-            filesArray[targetIndex] = temp;
+    // Initialize
+    document.addEventListener("DOMContentLoaded", () => {
+      elements.currentYear.textContent = new Date().getFullYear();
+      const savedHistory = JSON.parse(localStorage.getItem("pdfHistory")) || [];
+      savedHistory.forEach(item => {
+        elements.historyList.appendChild(createHistoryItem(item));
+      });
+    });
 
-            updateFileList();
+    // File Handling
+    elements.fileInput.addEventListener("change", handleFileSelect);
+    elements.dropZone.addEventListener("dragover", handleDragOver);
+    elements.dropZone.addEventListener("drop", handleFileDrop);
+
+    function handleFileSelect(e) {
+      processFiles([...e.target.files]);
+    }
+
+    function handleFileDrop(e) {
+      e.preventDefault();
+      elements.dropZone.classList.remove("dragover");
+      processFiles([...e.dataTransfer.files]);
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      elements.dropZone.classList.add("dragover");
+    }
+
+    function processFiles(files) {
+      files.forEach(file => {
+        if (file.type !== "application/pdf") {
+          showToast("Only PDF files allowed!", "warning");
+          return;
+        }
+        pdfFiles.push({ file, pages: 'all' });
+      });
+      updateFileDisplay();
+    }
+
+    // File List Display
+    function updateFileDisplay() {
+      elements.fileList.innerHTML = "";
+      let totalSize = 0;
+
+      pdfFiles.forEach(({ file }, index) => {
+        totalSize += file.size;
+        const fileItem = createFileItem(file, index);
+        elements.fileList.appendChild(fileItem);
+      });
+
+      elements.totalSize.textContent = `Total size: ${(totalSize / 1024 / 1024).toFixed(1)} MB`;
+    }
+
+    function createFileItem(file, index) {
+      const div = document.createElement("div");
+      div.className = "file-item d-flex align-items-center gap-2 p-2 mb-2 rounded";
+      div.innerHTML = `
+        <span class="serial-number">${index + 1}.</span>
+        <span class="text-truncate flex-grow-1">${file.name}</span>
+        <div class="btn-group">
+          <button class="btn btn-sm btn-outline-secondary" onclick="moveFile(${index}, -1)" ${index === 0 ? 'disabled' : ''}>
+            <i class="bi bi-arrow-up"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" onclick="moveFile(${index}, 1)" ${index === pdfFiles.length - 1 ? 'disabled' : ''}>
+            <i class="bi bi-arrow-down"></i>
+          </button>
+          <button class="btn btn-sm btn-outline-danger" onclick="removeFile(${index})">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      `;
+      return div;
+    }
+
+    // File Manipulation
+    function moveFile(index, direction) {
+      const newIndex = index + direction;
+      if (newIndex < 0 || newIndex >= pdfFiles.length) return;
+      [pdfFiles[index], pdfFiles[newIndex]] = [pdfFiles[newIndex], pdfFiles[index]];
+      updateFileDisplay();
+    }
+
+    function removeFile(index) {
+      pdfFiles.splice(index, 1);
+      updateFileDisplay();
+    }
+
+    // Merge Functionality
+    elements.mergeBtn.addEventListener("click", mergeFiles);
+
+    async function mergeFiles() {
+      if (pdfFiles.length < 1) {
+        showToast("Add at least one PDF to merge", "warning");
+        return;
+      }
+
+      showProgress(true);
+      const mergedPdf = await PDFLib.PDFDocument.create();
+
+      try {
+        for (let i = 0; i < pdfFiles.length; i++) {
+          const { file } = pdfFiles[i];
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+          const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+          copiedPages.forEach(page => mergedPdf.addPage(page));
+          updateProgress((i + 1) / pdfFiles.length * 100);
         }
 
-        function updateFileList() {
-            fileList.innerHTML = '';
-            filesArray.forEach((file, index) => {
-                const listItem = document.createElement('li');
-                listItem.textContent = file.name;
+        const mergedPdfBytes = await mergedPdf.save();
+        handleMergeSuccess(mergedPdfBytes);
+      } catch (error) {
+        showToast("Error merging files: " + error.message, "danger");
+        showProgress(false);
+      }
+    }
 
-                const upButton = document.createElement('button');
-                upButton.textContent = '↑';
-                upButton.onclick = () => moveFile(index, -1);
+    // Progress Handling
+    function showProgress(show) {
+      elements.progressWrapper.style.display = show ? "block" : "none";
+    }
 
-                const downButton = document.createElement('button');
-                downButton.textContent = '↓';
-                downButton.onclick = () => moveFile(index, 1);
+    function updateProgress(percentage) {
+      elements.progressBar.style.width = `${percentage}%`;
+      elements.progressBar.textContent = `${Math.floor(percentage)}%`;
+    }
 
-                listItem.appendChild(upButton);
-                listItem.appendChild(downButton);
-                fileList.appendChild(listItem);
-            });
-        }
+    // Merge Success Handling
+    function handleMergeSuccess(mergedPdfBytes) {
+      const blob = new Blob([mergedPdfBytes], { type: "application/pdf" });
+      const url = URL.createObjectURL(blob);
+      
+      document.getElementById("downloadBtn").onclick = () => {
+        const fileName = document.getElementById("pdfNameInput").value.trim() || "merged.pdf";
+        downloadFile(url, fileName);
+        updateHistory(fileName);
+        bootstrap.Modal.getInstance(document.getElementById("renameModal")).hide();
+      };
+      
+      showProgress(false);
+      new bootstrap.Modal(document.getElementById("renameModal")).show();
+    }
 
-        document.getElementById('mergeButton').addEventListener('click', async () => {
-            if (filesArray.length === 0) {
-                alert('Please select at least one PDF file.');
-                return;
-            }
+    function downloadFile(url, fileName) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+      a.click();
+    }
 
-            const mergedPdf = await PDFLib.PDFDocument.create();
-            for (let file of filesArray) {
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
-                const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-                copiedPages.forEach(page => mergedPdf.addPage(page));
-            }
+    function updateHistory(fileName) {
+      const historyItem = createHistoryItem(`${fileName} - ${new Date().toLocaleString()}`);
+      elements.historyList.prepend(historyItem);
+      
+      const history = JSON.parse(localStorage.getItem("pdfHistory")) || [];
+      history.unshift(historyItem.textContent);
+      localStorage.setItem("pdfHistory", JSON.stringify(history.slice(0, 10)));
+    }
 
-            const mergedPdfBytes = await mergedPdf.save();
-            const blob = new Blob([mergedPdfBytes], { type: 'application/pdf' });
+    function createHistoryItem(text) {
+      const li = document.createElement("li");
+      li.className = "list-group-item d-flex justify-content-between align-items-center";
+      li.textContent = text;
+      return li;
+    }
 
-            document.getElementById('renameSection').style.display = 'block';
-            document.getElementById('downloadButton').onclick = () => {
-                const newFileName = document.getElementById('fileName').value || 'merged.pdf';
-                saveAs(blob, newFileName);
-            };
-        });
-    </script>
+    // Theme Toggle
+    elements.themeToggle.addEventListener("click", toggleTheme);
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+      const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+      document.documentElement.setAttribute('data-bs-theme', newTheme);
+      localStorage.setItem("theme", newTheme);
+    }
+
+    // Toast System
+    function showToast(message, type = "info") {
+      const toast = document.createElement("div");
+      toast.className = `toast align-items-center text-bg-${type} border-0`;
+      toast.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">${message}</div>
+          <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+      `;
+      document.getElementById("toastContainer").appendChild(toast);
+      new bootstrap.Toast(toast, { autohide: true, delay: 3000 }).show();
+    }
+  </script>
 </body>
 </html>

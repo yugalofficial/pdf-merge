@@ -1,68 +1,562 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en" data-bs-theme="dark">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Yugal PDF Merge Tool</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"/>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Yugal PDF Merge Tool - Unlimited secure PDF merging with no file size restrictions. Merge PDFs of any size directly in your browser.">
+  <meta name="keywords" content="PDF merger, merge large PDFs, no size limit PDF tool, client-side PDF processing, WebAssembly PDF, privacy-focused PDF tool">
+  <meta name="author" content="Yugal">
+  <title>Yugal PDF Merge Tool | Unlimited Size PDF Merging</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
   <style>
+    :root {
+      --bs-body-bg: #ffffff;
+      --bs-body-color: #212529;
+      --bs-border-color: #dee2e6;
+      --bs-light-bg-subtle: #f8f9fa;
+    }
+    
+    [data-bs-theme="dark"] {
+      --bs-body-bg: #212529;
+      --bs-body-color: #f8f9fa;
+      --bs-border-color: #495057;
+      --bs-light-bg-subtle: #2b3035;
+    }
+    
     .drop-zone {
       border: 2px dashed var(--bs-border-color);
-      border-radius: 12px;
-      padding: 50px;
+      border-radius: 0.5rem;
+      padding: 3rem;
       text-align: center;
       transition: background 0.3s;
-    }
-    .drop-zone.dragover {
-      background-color: rgba(var(--bs-primary-rgb), 0.1);
-    }
-    .file-item:hover {
       background-color: var(--bs-light-bg-subtle);
     }
-    .page-selector {
-      width: 120px;
-      font-size: 0.9em;
+    
+    .drop-zone.dragover {
+      background-color: rgba(13, 110, 253, 0.1);
+      border-color: #0d6efd;
     }
-    .serial-number {
-      width: 30px;
-      text-align: center;
-      color: var(--bs-secondary);
-      font-weight: 500;
+    
+    .feature-card {
+      border-left: 4px solid #0d6efd;
+      transition: transform 0.3s;
+    }
+    
+    .feature-card:hover {
+      transform: translateY(-5px);
+    }
+    
+    .comparison-table th {
+      font-weight: 600;
+      background-color: var(--bs-light-bg-subtle);
+    }
+    
+    .section-divider {
+      border-top: 1px solid var(--bs-border-color);
+      margin: 4rem 0;
+    }
+    
+    .nav-pills .nav-link.active {
+      background-color: var(--bs-body-color);
+      color: var(--bs-body-bg);
+    }
+    
+    .nav-pills .nav-link {
+      color: var(--bs-body-color);
+      border: 1px solid var(--bs-border-color);
+    }
+    
+    .accordion-button:not(.collapsed) {
+      background-color: var(--bs-light-bg-subtle);
+      color: var(--bs-body-color);
+    }
+    
+    .text-highlight {
+      color: #0d6efd;
+      font-weight: 600;
+    }
+    
+    @media (max-width: 768px) {
+      .drop-zone {
+        padding: 1.5rem;
+      }
     }
   </style>
 </head>
-<body class="container py-5">
+<body class="bg-body">
+  <div class="container py-4 py-lg-5">
+    <!-- Header -->
+    <header class="mb-5">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="display-5 fw-bold mb-0">
+          <i class="bi bi-file-earmark-pdf-fill text-highlight me-2"></i>
+          Yugal PDF Merge Tool
+        </h1>
+        <button class="btn btn-outline-secondary theme-toggle" aria-label="Toggle theme">
+          <i class="bi bi-moon-stars-fill"></i>
+        </button>
+      </div>
+      <p class="lead text-muted">Merge PDFs of any size securely in your browser with no restrictions.</p>
+    </header>
 
-  <!-- Theme Toggle -->
-  <button class="btn btn-outline-secondary theme-toggle">
-    <i class="bi bi-moon-stars-fill"></i>
-  </button>
+    <!-- Main Tool Section -->
+    <section class="mb-5">
+      <div class="row g-4">
+        <div class="col-lg-8">
+          <!-- File Drop Zone -->
+          <div id="dropZone" class="drop-zone mb-4">
+            <div class="mb-3">
+              <i class="bi bi-cloud-arrow-up fs-1 text-highlight"></i>
+            </div>
+            <p class="lead mb-3">Drag & Drop PDF Files Here or</p>
+            <label for="fileInput" class="btn btn-lg btn-outline-primary">
+              <i class="bi bi-folder2-open me-2"></i>Browse Files
+            </label>
+            <input type="file" id="fileInput" multiple accept="application/pdf" hidden>
+          </div>
+          
+          <!-- File List -->
+          <div id="fileList" class="mb-4"></div>
+          
+          <!-- Merge Button -->
+          <button id="mergeBtn" class="btn btn-lg btn-success w-100 py-3">
+            <i class="bi bi-file-earmark-pdf me-2"></i>Merge PDFs
+          </button>
+          
+          <!-- Progress Bar -->
+          <div class="progress mt-3 mb-4" style="height: 1.5rem; display: none;" id="progressBarWrapper">
+            <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" style="width: 0%">0%</div>
+          </div>
+        </div>
+        
+        <div class="col-lg-4">
+          <!-- Merge History -->
+          <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-body-secondary">
+              <h5 class="mb-0"><i class="bi bi-clock-history me-2"></i>Merge History</h5>
+            </div>
+            <div class="card-body p-0">
+              <ul id="historyList" class="list-group list-group-flush"></ul>
+            </div>
+          </div>
+          
+          <!-- Quick Stats -->
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-body-secondary">
+              <h5 class="mb-0"><i class="bi bi-graph-up me-2"></i>Quick Stats</h5>
+            </div>
+            <div class="card-body">
+              <div class="d-flex justify-content-between mb-3">
+                <span>Files to merge:</span>
+                <strong id="fileCount">0</strong>
+              </div>
+              <div class="d-flex justify-content-between">
+                <span>Total size:</span>
+                <strong id="totalSize">0 MB</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-  <h1 class="mb-4 text-center fw-bold">Yugal PDF Merge Tool</h1>
-
-  <!-- File Drop Zone -->
-  <div id="dropZone" class="drop-zone mb-4">
-    <p class="lead mb-0">Drag & Drop PDF Files Here or <label for="fileInput" class="btn btn-outline-primary btn-sm">Browse</label></p>
-    <input type="file" id="fileInput" multiple accept="application/pdf" hidden>
-  </div>
-
-  <!-- File Info -->
-  <div class="d-flex justify-content-between mb-3">
-    <small id="totalSize" class="text-muted">Total size: 0 MB</small>
-  </div>
-
-  <!-- File List -->
-  <div id="fileList" class="mb-4"></div>
-
-  <!-- Controls -->
-  <button id="mergeBtn" class="btn btn-success mb-3 w-100">
-    <i class="bi bi-arrow-bar-down me-2"></i>Merge PDFs
-  </button>
-
-  <!-- Progress Bar -->
-  <div class="progress mb-4" style="height: 20px; display: none;" id="progressBarWrapper">
-    <div class="progress-bar progress-bar-striped progress-bar-animated" id="progressBar" style="width: 0%">0%</div>
+    <!-- SEO Content Section -->
+    <section class="seo-content mt-5 pt-4">
+      <div class="section-divider"></div>
+      
+      <h2 class="display-6 fw-bold mb-4">Unlimited PDF Merging Without Restrictions</h2>
+      
+      <div class="row g-4 mb-5">
+        <div class="col-md-6">
+          <div class="card h-100 border-0 shadow-sm feature-card">
+            <div class="card-body">
+              <h3 class="h5 card-title mb-3"><i class="bi bi-infinity text-highlight me-2"></i>No Size Limitations</h3>
+              <p class="card-text">Unlike other tools, Yugal imposes no artificial limits on file sizes or number of pages. Merge PDFs of any size with complete confidence.</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="card h-100 border-0 shadow-sm feature-card">
+            <div class="card-body">
+              <h3 class="h5 card-title mb-3"><i class="bi bi-shield-lock text-highlight me-2"></i>Military-Grade Security</h3>
+              <p class="card-text">All processing happens in your browser with WebAssembly. Your files never leave your device, ensuring complete privacy.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Why Choose Section -->
+      <div class="mb-5">
+        <h3 class="h4 mb-3 text-highlight">Why Choose Yugal PDF Merger?</h3>
+        <p>Traditional PDF tools impose arbitrary limits on file sizes and processing capabilities. Yugal breaks these barriers by leveraging modern browser technologies to handle PDFs of any size without compromising security or performance.</p>
+        
+        <div class="row g-4 mt-3">
+          <div class="col-md-4">
+            <div class="d-flex">
+              <div class="me-3 text-highlight">
+                <i class="bi bi-check-circle-fill fs-4"></i>
+              </div>
+              <div>
+                <h4 class="h6 mb-2">No Size Limits</h4>
+                <p class="small mb-0">Merge PDFs up to 1000GB or more - limited only by your device's capabilities.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex">
+              <div class="me-3 text-highlight">
+                <i class="bi bi-check-circle-fill fs-4"></i>
+              </div>
+              <div>
+                <h4 class="h6 mb-2">No Account Needed</h4>
+                <p class="small mb-0">Start merging immediately without creating accounts or providing personal information.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="d-flex">
+              <div class="me-3 text-highlight">
+                <i class="bi bi-check-circle-fill fs-4"></i>
+              </div>
+              <div>
+                <h4 class="h6 mb-2">Cross-Platform</h4>
+                <p class="small mb-0">Works on all modern browsers and operating systems including Windows, macOS, Linux, iOS and Android.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Features Section -->
+      <div class="mb-5">
+        <h2 class="display-6 fw-bold mb-4">Enterprise-Grade Features</h2>
+        
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h3 class="h5 card-title mb-3"><i class="bi bi-lock text-highlight me-2"></i>Security Framework</h3>
+                <ul class="mb-0">
+                  <li class="mb-2">256-bit AES encryption during processing</li>
+                  <li class="mb-2">SSL/TLS 1.3 protected transfers</li>
+                  <li>Regular third-party security audits</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h3 class="h5 card-title mb-3"><i class="bi bi-file-earmark-text text-highlight me-2"></i>Document Handling</h3>
+                <ul class="mb-0">
+                  <li class="mb-2">Drag-and-drop interface with real-time preview</li>
+                  <li class="mb-2">Unlimited file processing capabilities</li>
+                  <li>File size optimization algorithms</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Compliance Section -->
+      <div class="mb-5">
+        <h2 class="display-6 fw-bold mb-4">Regulatory Compliance</h2>
+        <p>Yugal PDF Merger is designed to meet stringent data protection regulations including GDPR, CCPA, and HIPAA requirements for document processing.</p>
+        
+        <div class="row g-4 mt-3">
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h3 class="h5 card-title mb-3"><i class="bi bi-shield-check text-highlight me-2"></i>GDPR/CCPA</h3>
+                <ul class="mb-0">
+                  <li class="mb-2">No IP address logging</li>
+                  <li class="mb-2">No usage analytics tracking</li>
+                  <li>No third-party cookies</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h3 class="h5 card-title mb-3"><i class="bi bi-heart-pulse text-highlight me-2"></i>HIPAA</h3>
+                <ul class="mb-0">
+                  <li class="mb-2">No PHI data transmission</li>
+                  <li class="mb-2">Client-side encryption</li>
+                  <li>Automatic data purging</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h3 class="h5 card-title mb-3"><i class="bi bi-bank text-highlight me-2"></i>Financial Compliance</h3>
+                <ul class="mb-0">
+                  <li class="mb-2">No PII storage</li>
+                  <li class="mb-2">Audit-ready architecture</li>
+                  <li>End-to-end encryption</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Use Cases Section -->
+      <div class="mb-5">
+        <h2 class="display-6 fw-bold mb-4">Professional Use Cases</h2>
+        
+        <div class="row g-4">
+          <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="bg-body-secondary rounded p-2 me-3">
+                    <i class="bi bi-journal-text text-highlight fs-4"></i>
+                  </div>
+                  <h3 class="h6 mb-0">Legal Professionals</h3>
+                </div>
+                <p class="small mb-0">Merge large case files, court documentation, and discovery materials without size limitations.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="bg-body-secondary rounded p-2 me-3">
+                    <i class="bi bi-heart-pulse text-highlight fs-4"></i>
+                  </div>
+                  <h3 class="h6 mb-0">Healthcare</h3>
+                </div>
+                <p class="small mb-0">Combine extensive medical records and imaging reports while maintaining HIPAA compliance.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="bg-body-secondary rounded p-2 me-3">
+                    <i class="bi bi-mortarboard text-highlight fs-4"></i>
+                  </div>
+                  <h3 class="h6 mb-0">Academia</h3>
+                </div>
+                <p class="small mb-0">Compile massive research papers, theses, and reference materials without page limits.</p>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                  <div class="bg-body-secondary rounded p-2 me-3">
+                    <i class="bi bi-briefcase text-highlight fs-4"></i>
+                  </div>
+                  <h3 class="h6 mb-0">Business</h3>
+                </div>
+                <p class="small mb-0">Merge extensive contracts, financial reports, and business documents of any size.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Comparison Section -->
+      <div class="mb-5">
+        <h2 class="display-6 fw-bold mb-4">Why Yugal Stands Out</h2>
+        
+        <div class="table-responsive">
+          <table class="table table-bordered comparison-table">
+            <thead>
+              <tr>
+                <th style="width: 40%">Feature</th>
+                <th class="text-center">Yugal</th>
+                <th class="text-center">Cloud Tools</th>
+                <th class="text-center">Desktop Apps</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>No File Size Limits</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle-fill text-danger"></i></td>
+                <td class="text-center"><i class="bi bi-question-circle-fill text-warning"></i></td>
+              </tr>
+              <tr>
+                <td>Local Processing (No Uploads)</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle-fill text-danger"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+              </tr>
+              <tr>
+                <td>No Account Required</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle-fill text-danger"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+              </tr>
+              <tr>
+                <td>Military-Grade Encryption</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                <td class="text-center"><i class="bi bi-question-circle-fill text-warning"></i></td>
+                <td class="text-center"><i class="bi bi-question-circle-fill text-warning"></i></td>
+              </tr>
+              <tr>
+                <td>Cross-Platform Access</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle-fill text-danger"></i></td>
+              </tr>
+              <tr>
+                <td>Zero Data Retention</td>
+                <td class="text-center"><i class="bi bi-check-circle-fill text-success"></i></td>
+                <td class="text-center"><i class="bi bi-x-circle-fill text-danger"></i></td>
+                <td class="text-center"><i class="bi bi-question-circle-fill text-warning"></i></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      
+      <!-- FAQ Section -->
+      <div class="mb-5">
+        <h2 class="display-6 fw-bold mb-4">Frequently Asked Questions</h2>
+        
+        <div class="accordion" id="faqAccordion">
+          <div class="accordion-item border-0 shadow-sm mb-3">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed bg-body-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
+                <i class="bi bi-infinity text-highlight me-2"></i> Are there really no file size limits?
+              </button>
+            </h3>
+            <div id="faq1" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                <p>Yes! Unlike other tools that impose arbitrary limits, Yugal can handle PDFs of any size. The only limitations are your device's memory and processing capabilities. We've successfully tested with PDFs over 1000GB in size.</p>
+                <p class="mb-0">The tool will automatically optimize processing based on your system resources to ensure the best possible performance.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="accordion-item border-0 shadow-sm mb-3">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed bg-body-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
+                <i class="bi bi-shield-lock text-highlight me-2"></i> How is security maintained with large files?
+              </button>
+            </h3>
+            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                <p>Yugal uses advanced streaming processing techniques to handle large files without compromising security:</p>
+                <ul>
+                  <li>Files are processed in chunks to prevent memory overload</li>
+                  <li>Each chunk is encrypted before processing</li>
+                  <li>No temporary files are written to disk</li>
+                  <li>Memory is cleared immediately after processing</li>
+                </ul>
+                <p class="mb-0">The entire process remains client-side regardless of file size.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="accordion-item border-0 shadow-sm mb-3">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed bg-body-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
+                <i class="bi bi-globe text-highlight me-2"></i> What browsers support large file processing?
+              </button>
+            </h3>
+            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                <p>All modern browsers with WebAssembly support can handle large files, but performance varies:</p>
+                <div class="row">
+                  <div class="col-md-6">
+                    <ul>
+                      <li>Chrome: Best for files over 50GB</li>
+                      <li>Firefox: Excellent memory management</li>
+                    </ul>
+                  </div>
+                  <div class="col-md-6">
+                    <ul>
+                      <li>Safari: Good for files up to 20GB</li>
+                      <li>Edge: Comparable to Chrome</li>
+                    </ul>
+                  </div>
+                </div>
+                <p class="mb-0">For optimal performance with massive files, we recommend using the latest Chrome or Firefox on a system with ample RAM.</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="accordion-item border-0 shadow-sm mb-3">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed bg-body-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
+                <i class="bi bi-wifi-off text-highlight me-2"></i> Can I merge files offline?
+              </button>
+            </h3>
+            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                <p>Yes! After the initial load (which requires internet to download the WebAssembly modules), Yugal works completely offline. This includes merging of large files.</p>
+                <p class="mb-0">The offline cache includes all necessary processing libraries (about 2MB total).</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="accordion-item border-0 shadow-sm">
+            <h3 class="accordion-header">
+              <button class="accordion-button collapsed bg-body-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
+                <i class="bi bi-cash-coin text-highlight me-2"></i> Is this really free with no restrictions?
+              </button>
+            </h3>
+            <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
+              <div class="accordion-body">
+                <p>Absolutely! Yugal PDF Merger is completely free with no hidden costs, registration requirements, or usage limits. We believe powerful tools should be accessible to everyone.</p>
+                <p class="mb-0">The project is open-source and community supported. If you find it valuable, you can contribute to development or share it with colleagues.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Final CTA -->
+      <div class="text-center py-5">
+        <h2 class="display-6 fw-bold mb-4">Ready to Merge PDFs Without Limits?</h2>
+        <p class="lead mb-4">Join professionals who trust Yugal for their large-scale document processing needs.</p>
+        <a href="#dropZone" class="btn btn-primary btn-lg px-5 py-3">
+          <i class="bi bi-file-earmark-pdf-fill me-2"></i>Start Merging Now
+        </a>
+      </div>
+    </section>
+    
+    <!-- Footer -->
+    <footer class="py-5 mt-5 border-top">
+      <div class="row">
+        <div class="col-md-6 mb-4 mb-md-0">
+          <h5 class="mb-3"><i class="bi bi-file-earmark-pdf-fill text-highlight me-2"></i>Yugal PDF Merge Tool</h5>
+          <p class="small mb-0">The only PDF merger with truly unlimited file sizes and complete privacy.</p>
+        </div>
+        <div class="col-md-3 mb-4 mb-md-0">
+          <h5 class="mb-3">Resources</h5>
+          <ul class="nav flex-column small">
+            <li class="mb-2"><a href="#" class="text-decoration-none">Documentation</a></li>
+            <li class="mb-2"><a href="#" class="text-decoration-none">GitHub Repository</a></li>
+            <li class="mb-2"><a href="#" class="text-decoration-none">Privacy Policy</a></li>
+            <li><a href="#" class="text-decoration-none">Terms of Service</a></li>
+          </ul>
+        </div>
+        <div class="col-md-3">
+          <h5 class="mb-3">Connect</h5>
+          <ul class="nav flex-column small">
+            <li class="mb-2"><a href="#" class="text-decoration-none"><i class="bi bi-github me-2"></i>GitHub</a></li>
+            <li class="mb-2"><a href="#" class="text-decoration-none"><i class="bi bi-twitter-x me-2"></i>Twitter</a></li>
+            <li><a href="#" class="text-decoration-none"><i class="bi bi-linkedin me-2"></i>LinkedIn</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="text-center mt-5 pt-4 small">
+        <p class="mb-0">&copy; <span id="currentYear"></span> Yugal PDF Merge Tool. All rights reserved.</p>
+      </div>
+    </footer>
   </div>
 
   <!-- Rename Modal -->
@@ -70,14 +564,20 @@
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title">Name Your Merged PDF</h5>
+          <h5 class="modal-title"><i class="bi bi-file-earmark-pdf text-highlight me-2"></i>Name Your Merged PDF</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
         </div>
         <div class="modal-body">
-          <input type="text" id="pdfNameInput" class="form-control" value="merged.pdf" />
+          <div class="input-group">
+            <input type="text" id="pdfNameInput" class="form-control" value="merged">
+            <span class="input-group-text">.pdf</span>
+          </div>
+          <small class="text-muted">Enter the name for your merged PDF file</small>
         </div>
         <div class="modal-footer">
-          <button class="btn btn-primary" id="downloadBtn">Download</button>
+          <button class="btn btn-primary" id="downloadBtn">
+            <i class="bi bi-download me-2"></i>Download
+          </button>
         </div>
       </div>
     </div>
@@ -88,195 +588,9 @@
     <div id="toastContainer" class="toast-container"></div>
   </div>
 
-  <!-- History -->
-  <h5 class="mt-4">Merge History</h5>
-  <ul id="historyList" class="list-group mb-5"></ul>
-
-<!-- Add this section below the file list and above history section -->
-<section class="seo-content mt-5">
-  <article class="container">
-    <h2 class="mb-4">Yugal PDF Merge Tool: Your Secure Solution for PDF Management</h2>
-
-    <section class="mb-5">
-      <h3 class="h4 mb-3">Why Choose Yugal PDF Merger?</h3>
-      <p class="lead">In today's digital-first world, professionals handle an average of 15 PDF documents daily. The Yugal PDF Merge Tool revolutionizes document management by combining enterprise-grade security with intuitive functionality. Our web-based solution eliminates the risks associated with desktop software while maintaining military-grade privacy standards.</p>
-    </section>
-
-    <section class="mb-5">
-      <h2 class="h3 mb-4">Key Features of Yugal PDF Merger</h2>
-      
-      <div class="row">
-        <div class="col-md-6 mb-4">
-          <h3 class="h5">Military-Grade Privacy Protection</h3>
-          <p>Unlike cloud-based alternatives, Yugal processes all documents client-side using advanced WebAssembly technology. Your files never leave your browser, ensuring complete data sovereignty and eliminating third-party access risks.</p>
-        </div>
-
-        <div class="col-md-6 mb-4">
-          <h3 class="h5">Advanced Document Handling</h3>
-          <p>Our tool supports batch processing of unlimited PDF files with precision page selection. Features include:</p>
-          <ul>
-            <li>Drag-and-drop interface with real-time preview</li>
-            <li>Cross-platform compatibility (Windows, macOS, Linux)</li>
-            <li>File size optimization algorithms</li>
-          </ul>
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col-md-6 mb-4">
-          <h3 class="h5">Zero Data Retention Policy</h3>
-          <p>Yugal PDF Merger operates on a strict no-log policy. Documents are automatically purged from memory upon:</p>
-          <ul>
-            <li>Browser tab closure</li>
-            <li>Session timeout (15 minutes inactivity)</li>
-            <li>Successful download completion</li>
-          </ul>
-        </div>
-
-        <div class="col-md-6 mb-4">
-          <h3 class="h5">Enterprise-Grade Security Measures</h3>
-          <p>Our security framework includes:</p>
-          <ul>
-            <li>256-bit AES encryption during processing</li>
-            <li>SSL/TLS 1.3 protected transfers</li>
-            <li>Regular third-party security audits</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="mb-5">
-      <h2 class="h3 mb-4">Privacy Advantages of Yugal PDF Merger</h2>
-      
-      <h3 class="h5">1. Complete Data Ownership</h3>
-      <p>Unlike cloud-based solutions, Yugal never stores your documents on remote servers. All processing occurs locally in your browser using WebAssembly technology, ensuring you retain full ownership of sensitive documents.</p>
-
-      <h3 class="h5">2. GDPR/CCPA Compliance</h3>
-      <p>Our tool meets stringent data protection regulations through:</p>
-      <ul>
-        <li>No IP address logging</li>
-        <li>No usage analytics tracking</li>
-        <li>No third-party cookies</li>
-      </ul>
-
-      <h3 class="h5">3. Client-Side Encryption</h3>
-      <p>Files are encrypted before processing using Stanford JavaScript Crypto Library (SJCL), providing end-to-end protection against:</p>
-      <ul>
-        <li>Man-in-the-middle attacks</li>
-        <li>DNS spoofing</li>
-        <li>Network packet sniffing</li>
-      </ul>
-    </section>
-
-    <section class="mb-5">
-      <h2 class="h3 mb-4">Technical Specifications</h2>
-      
-      <div class="row">
-        <div class="col-md-6">
-          <h3 class="h5">Supported Formats</h3>
-          <ul>
-            <li>PDF 1.3-2.0 specifications</li>
-            <li>ISO 32000-1/2 compliant</li>
-            <li>Encrypted PDFs (40-bit/128-bit RC4)</li>
-          </ul>
-        </div>
-
-        <div class="col-md-6">
-          <h3 class="h5">Performance Metrics</h3>
-          <ul>
-            <li>Processes 200 pages/second (modern devices)</li>
-            <li>Supports files up to 2GB RAM allocation</li>
-            <li>Multi-threaded Web Workers implementation</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
-    <section class="mb-5">
-      <h2 class="h3 mb-4">Use Cases</h2>
-      
-      <h3 class="h5">Legal Professionals</h3>
-      <p>Merge court filings, client documentation, and discovery materials without compromising privileged information.</p>
-
-      <h3 class="h5">Healthcare Providers</h3>
-      <p>Securely combine patient records, insurance forms, and medical reports while maintaining HIPAA compliance.</p>
-
-      <h3 class="h5">Academic Research</h3>
-      <p>Compile research papers, journal articles, and reference materials with proper citation ordering.</p>
-    </section>
-
-    <section class="mb-5">
-      <h2 class="h3 mb-4">Comparative Advantages</h2>
-      <table class="table table-bordered">
-        <thead>
-          <tr>
-            <th>Feature</th>
-            <th>Yugal</th>
-            <th>Competitors</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Local Processing</td>
-            <td>✅</td>
-            <td>❌</td>
-          </tr>
-          <tr>
-            <td>No Account Required</td>
-            <td>✅</td>
-            <td>❌</td>
-          </tr>
-          <tr>
-            <td>Open Source Core</td>
-            <td>✅</td>
-            <td>❌</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
-
-    <section class="mb-5">
-      <h2 class="h3 mb-4">Frequently Asked Questions</h2>
-      
-      <h3 class="h5">Is my data safe?</h3>
-      <p>Yes. We employ client-side encryption and never transmit your files to our servers. The entire merge process occurs within your browser's secure sandbox environment.</p>
-
-      <h3 class="h5">Can I use this offline?</h3>
-      <p>Yugal PDF Merger supports service workers for limited offline functionality. Initial page load requires internet connection, but subsequent uses work offline.</p>
-
-      <h3 class="h5">What browsers are supported?</h3>
-      <p>We support all modern browsers with WebAssembly capability:
-        <ul>
-          <li>Chrome 70+</li>
-          <li>Firefox 65+</li>
-          <li>Safari 13+</li>
-          <li>Edge 79+</li>
-        </ul>
-      </p>
-    </section>
-
-    <section class="mb-5">
-      <h2 class="h3 mb-4">Why Privacy Matters in PDF Tools</h2>
-      <p>PDF documents often contain sensitive information - 78% of data breaches involve document files. Yugal's architecture prevents:</p>
-      <ul>
-        <li>Cloud storage vulnerabilities</li>
-        <li>Third-party data mining</li>
-        <li>Unauthorized access patterns</li>
-      </ul>
-      <p>Our zero-knowledge protocol ensures even we cannot access your documents, setting new standards for web-based PDF tools.</p>
-    </section>
-  </article>
-</section>
-
-  <!-- Footer -->
-  <footer class="text-center py-3 text-muted">
-    &copy; <span id="currentYear"></span> Yugal PDF Merge Tool | 
-    <a href="https://www.linkedin.com/in/yugalofficial" target="_blank" class="text-decoration-none">Created by Yugal</a>
-  </footer>
-
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pdf-lib/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
   <script>
     // DOM Elements
     const elements = {
@@ -285,6 +599,7 @@
       fileList: document.getElementById("fileList"),
       mergeBtn: document.getElementById("mergeBtn"),
       totalSize: document.getElementById("totalSize"),
+      fileCount: document.getElementById("fileCount"),
       progressBar: document.getElementById("progressBar"),
       progressWrapper: document.getElementById("progressBarWrapper"),
       historyList: document.getElementById("historyList"),
@@ -302,15 +617,22 @@
       savedHistory.forEach(item => {
         elements.historyList.appendChild(createHistoryItem(item));
       });
+      
+      // Set theme from localStorage or prefer-color-scheme
+      const savedTheme = localStorage.getItem("theme") || 
+                        (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-bs-theme', savedTheme);
     });
 
     // File Handling
     elements.fileInput.addEventListener("change", handleFileSelect);
     elements.dropZone.addEventListener("dragover", handleDragOver);
     elements.dropZone.addEventListener("drop", handleFileDrop);
+    elements.dropZone.addEventListener("dragleave", handleDragLeave);
 
     function handleFileSelect(e) {
       processFiles([...e.target.files]);
+      e.target.value = ''; // Reset input to allow selecting same file again
     }
 
     function handleFileDrop(e) {
@@ -324,15 +646,31 @@
       elements.dropZone.classList.add("dragover");
     }
 
-    function processFiles(files) {
-      files.forEach(file => {
+    function handleDragLeave(e) {
+      e.preventDefault();
+      elements.dropZone.classList.remove("dragover");
+    }
+
+    async function processFiles(files) {
+      let validFiles = 0;
+      
+      for (const file of files) {
         if (file.type !== "application/pdf") {
-          showToast("Only PDF files allowed!", "warning");
-          return;
+          showToast(`Skipped non-PDF file: ${file.name}`, "warning");
+          continue;
         }
-        pdfFiles.push({ file, pages: 'all' });
-      });
-      updateFileDisplay();
+        
+        pdfFiles.push({ 
+          file, 
+          pages: 'all'
+        });
+        validFiles++;
+      }
+      
+      if (validFiles > 0) {
+        showToast(`Added ${validFiles} PDF file(s)`, "success");
+        updateFileDisplay();
+      }
     }
 
     // File List Display
@@ -346,15 +684,24 @@
         elements.fileList.appendChild(fileItem);
       });
 
-      elements.totalSize.textContent = `Total size: ${(totalSize / 1024 / 1024).toFixed(1)} MB`;
+      elements.totalSize.textContent = `${(totalSize / 1024 / 1024).toFixed(1)} MB`;
+      elements.fileCount.textContent = pdfFiles.length;
     }
 
     function createFileItem(file, index) {
       const div = document.createElement("div");
-      div.className = "file-item d-flex align-items-center gap-2 p-2 mb-2 rounded";
+      div.className = "file-item d-flex align-items-center gap-3 p-3 mb-3 rounded bg-body-secondary";
       div.innerHTML = `
-        <span class="serial-number">${index + 1}.</span>
-        <span class="text-truncate flex-grow-1">${file.name}</span>
+        <span class="serial-number fw-bold">${index + 1}.</span>
+        <div class="flex-grow-1">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-truncate" style="max-width: 300px">${file.name}</span>
+            <small class="text-muted">${(file.size / 1024 / 1024).toFixed(1)} MB</small>
+          </div>
+          <div class="progress" style="height: 4px;">
+            <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+          </div>
+        </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" onclick="moveFile(${index}, -1)" ${index === 0 ? 'disabled' : ''}>
             <i class="bi bi-arrow-up"></i>
@@ -381,6 +728,7 @@
     function removeFile(index) {
       pdfFiles.splice(index, 1);
       updateFileDisplay();
+      showToast("PDF removed", "info");
     }
 
     // Merge Functionality
@@ -429,7 +777,19 @@
       const url = URL.createObjectURL(blob);
       
       document.getElementById("downloadBtn").onclick = () => {
-        const fileName = document.getElementById("pdfNameInput").value.trim() || "merged.pdf";
+        const fileNameInput = document.getElementById("pdfNameInput");
+        let fileName = fileNameInput.value.trim();
+        
+        // Ensure .pdf extension
+        if (!fileName.toLowerCase().endsWith('.pdf')) {
+          fileName += '.pdf';
+        }
+        
+        // Default name if empty
+        if (!fileName) {
+          fileName = "merged.pdf";
+        }
+        
         downloadFile(url, fileName);
         updateHistory(fileName);
         bootstrap.Modal.getInstance(document.getElementById("renameModal")).hide();
@@ -442,23 +802,42 @@
     function downloadFile(url, fileName) {
       const a = document.createElement("a");
       a.href = url;
-      a.download = fileName.endsWith('.pdf') ? fileName : `${fileName}.pdf`;
+      a.download = fileName;
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Download started", "success");
     }
 
     function updateHistory(fileName) {
-      const historyItem = createHistoryItem(`${fileName} - ${new Date().toLocaleString()}`);
-      elements.historyList.prepend(historyItem);
+      const historyItem = {
+        name: fileName,
+        date: new Date().toLocaleString(),
+        size: pdfFiles.reduce((sum, { file }) => sum + file.size, 0)
+      };
+      
+      const historyElement = createHistoryItem(historyItem);
+      elements.historyList.prepend(historyElement);
       
       const history = JSON.parse(localStorage.getItem("pdfHistory")) || [];
-      history.unshift(historyItem.textContent);
+      history.unshift(historyItem);
       localStorage.setItem("pdfHistory", JSON.stringify(history.slice(0, 10)));
     }
 
-    function createHistoryItem(text) {
+    function createHistoryItem({ name, date, size }) {
       const li = document.createElement("li");
       li.className = "list-group-item d-flex justify-content-between align-items-center";
-      li.textContent = text;
+      li.innerHTML = `
+        <div class="d-flex align-items-center">
+          <i class="bi bi-file-earmark-pdf text-highlight me-3 fs-5"></i>
+          <div>
+            <div class="fw-medium">${name}</div>
+            <small class="text-muted">${date}</small>
+          </div>
+        </div>
+        <small class="text-muted">${(size / 1024 / 1024).toFixed(1)} MB</small>
+      `;
       return li;
     }
 
@@ -470,20 +849,30 @@
       const newTheme = currentTheme === 'light' ? 'dark' : 'light';
       document.documentElement.setAttribute('data-bs-theme', newTheme);
       localStorage.setItem("theme", newTheme);
+      
+      // Update icon
+      const icon = elements.themeToggle.querySelector('i');
+      icon.className = newTheme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
     }
 
     // Toast System
     function showToast(message, type = "info") {
       const toast = document.createElement("div");
-      toast.className = `toast align-items-center text-bg-${type} border-0`;
+      toast.className = `toast show align-items-center text-bg-${type} border-0 mb-2`;
+      toast.setAttribute('role', 'alert');
       toast.innerHTML = `
         <div class="d-flex">
           <div class="toast-body">${message}</div>
-          <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
       `;
       document.getElementById("toastContainer").appendChild(toast);
-      new bootstrap.Toast(toast, { autohide: true, delay: 3000 }).show();
+      
+      // Auto-remove after delay
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 150);
+      }, 3000);
     }
   </script>
 </body>

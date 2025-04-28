@@ -149,6 +149,48 @@
     @keyframes spin {
       to { transform: rotate(360deg); }
     }
+    
+    /* Memory warning */
+    .memory-warning {
+      background-color: #fff3cd;
+      color: #856404;
+      padding: 0.75rem 1.25rem;
+      margin-bottom: 1rem;
+      border-radius: 0.25rem;
+      display: none;
+    }
+    
+    [data-bs-theme="dark"] .memory-warning {
+      background-color: #332701;
+      color: #ffdf7d;
+    }
+    
+    /* Custom modal for alerts */
+    .alert-modal .modal-dialog {
+      max-width: 500px;
+    }
+    
+    .alert-modal .modal-body {
+      padding: 1.5rem;
+    }
+    
+    .alert-modal .modal-footer {
+      justify-content: center;
+      border-top: none;
+      padding-bottom: 1.5rem;
+    }
+    
+    .duplicate-file {
+      background-color: rgba(255, 193, 7, 0.2);
+    }
+    
+    .error-file {
+      background-color: rgba(220, 53, 69, 0.2);
+    }
+    
+    .encrypted-file {
+      background-color: rgba(13, 110, 253, 0.2);
+    }
   </style>
 </head>
 <body class="bg-body">
@@ -166,6 +208,12 @@
   </nav>
 
   <div class="container py-4">
+    <!-- Memory Warning -->
+    <div id="memoryWarning" class="memory-warning">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>
+      <strong>Large file warning:</strong> You're merging very large files. This may take longer and require significant memory. For best results, use Chrome/Firefox on a computer with ample RAM.
+    </div>
+    
     <!-- Main Tool Section -->
     <section class="mb-5">
       <div class="row g-4">
@@ -591,6 +639,83 @@
     </div>
   </div>
 
+  <!-- Alert Modal -->
+  <div class="modal fade alert-modal" id="alertModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title" id="alertModalTitle"></h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="alertModalBody">
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Duplicate File Modal -->
+  <div class="modal fade alert-modal" id="duplicateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title">Duplicate File Detected</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="duplicateFileName"></p>
+          <p>This file appears to be identical to one already in your merge list.</p>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep Both</button>
+          <button type="button" class="btn btn-danger" id="removeDuplicateBtn">Remove Duplicate</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Encrypted File Modal -->
+  <div class="modal fade alert-modal" id="encryptedModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title">Encrypted PDF Detected</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="encryptedFileName"></p>
+          <p>This PDF is password-protected. The merged PDF will remain password-protected.</p>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep File</button>
+          <button type="button" class="btn btn-danger" id="removeEncryptedBtn">Remove File</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Invalid PDF Modal -->
+  <div class="modal fade alert-modal" id="invalidPdfModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header border-0">
+          <h5 class="modal-title">Invalid PDF Detected</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p id="invalidPdfName"></p>
+          <p>This file doesn't appear to be a valid PDF document.</p>
+        </div>
+        <div class="modal-footer border-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Keep File</button>
+          <button type="button" class="btn btn-danger" id="removeInvalidPdfBtn">Remove File</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Terms Modal -->
   <div class="modal fade" id="termsModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -727,11 +852,6 @@
     </div>
   </div>
 
-  <!-- Toast Container -->
-  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
-    <div id="toastContainer" class="toast-container"></div>
-  </div>
-
   <!-- Loading Overlay -->
   <div id="loadingOverlay" class="loading-overlay" style="display: none;">
     <div class="loading-spinner"></div>
@@ -759,12 +879,28 @@
       currentYear: document.getElementById('currentYear'),
       loadingOverlay: document.getElementById('loadingOverlay'),
       loadingMessage: document.getElementById('loadingMessage'),
-      loadingDetails: document.getElementById('loadingDetails')
+      loadingDetails: document.getElementById('loadingDetails'),
+      memoryWarning: document.getElementById('memoryWarning'),
+      alertModal: new bootstrap.Modal(document.getElementById('alertModal')),
+      alertModalTitle: document.getElementById('alertModalTitle'),
+      alertModalBody: document.getElementById('alertModalBody'),
+      duplicateModal: new bootstrap.Modal(document.getElementById('duplicateModal')),
+      duplicateFileName: document.getElementById('duplicateFileName'),
+      removeDuplicateBtn: document.getElementById('removeDuplicateBtn'),
+      encryptedModal: new bootstrap.Modal(document.getElementById('encryptedModal')),
+      encryptedFileName: document.getElementById('encryptedFileName'),
+      removeEncryptedBtn: document.getElementById('removeEncryptedBtn'),
+      invalidPdfModal: new bootstrap.Modal(document.getElementById('invalidPdfModal')),
+      invalidPdfName: document.getElementById('invalidPdfName'),
+      removeInvalidPdfBtn: document.getElementById('removeInvalidPdfBtn')
     };
 
     // State
     let pdfFiles = [];
     let mergeInProgress = false;
+    let currentDuplicateIndex = -1;
+    let currentEncryptedIndex = -1;
+    let currentInvalidIndex = -1;
 
     // Initialize
     document.addEventListener("DOMContentLoaded", () => {
@@ -779,6 +915,22 @@
       // Update theme icon
       const icon = elements.themeToggle.querySelector('i');
       icon.className = savedTheme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
+      
+      // Set up modal handlers
+      elements.removeDuplicateBtn.addEventListener('click', () => {
+        removeFile(currentDuplicateIndex);
+        elements.duplicateModal.hide();
+      });
+      
+      elements.removeEncryptedBtn.addEventListener('click', () => {
+        removeFile(currentEncryptedIndex);
+        elements.encryptedModal.hide();
+      });
+      
+      elements.removeInvalidPdfBtn.addEventListener('click', () => {
+        removeFile(currentInvalidIndex);
+        elements.invalidPdfModal.hide();
+      });
     });
 
     // File Handling
@@ -810,68 +962,123 @@
 
     async function processFiles(files) {
       if (mergeInProgress) {
-        showToast("Please wait for current merge to complete", "warning");
+        showAlert("Merge in Progress", "Please wait for current merge to complete before adding more files");
         return;
       }
       
       let validFiles = 0;
-      const maxFiles = 100; // Reasonable limit to prevent UI issues
-      
-      if (files.length + pdfFiles.length > maxFiles) {
-        showToast(`Cannot add more than ${maxFiles} files at once`, "warning");
-        files = files.slice(0, maxFiles - pdfFiles.length);
-      }
       
       for (const file of files) {
         if (file.type !== "application/pdf") {
-          showToast(`Skipped non-PDF file: ${file.name}`, "warning");
+          showAlert("Invalid File Type", `Skipped non-PDF file: ${file.name}`);
           continue;
         }
         
         // Check for duplicate files
-        if (pdfFiles.some(f => f.file.name === file.name && f.file.size === file.size && f.file.lastModified === file.lastModified)) {
-          showToast(`Skipped duplicate file: ${file.name}`, "info");
+        const duplicateIndex = pdfFiles.findIndex(f => 
+          f.file.name === file.name && 
+          f.file.size === file.size && 
+          f.file.lastModified === file.lastModified
+        );
+        
+        if (duplicateIndex !== -1) {
+          currentDuplicateIndex = duplicateIndex;
+          elements.duplicateFileName.textContent = file.name;
+          elements.duplicateModal.show();
           continue;
         }
         
-        pdfFiles.push({ 
-          file, 
-          pages: 'all'
-        });
-        validFiles++;
+        // Validate the PDF file
+        try {
+          const arrayBuffer = await file.arrayBuffer();
+          const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+          
+          // Check if the PDF is encrypted
+          if (pdfDoc.isEncrypted) {
+            currentEncryptedIndex = pdfFiles.length;
+            elements.encryptedFileName.textContent = file.name;
+            elements.encryptedModal.show();
+          }
+          
+          pdfFiles.push({ 
+            file, 
+            pages: 'all',
+            isEncrypted: pdfDoc.isEncrypted,
+            isValid: true
+          });
+          validFiles++;
+          
+        } catch (error) {
+          console.error(`Error processing file ${file.name}:`, error);
+          currentInvalidIndex = pdfFiles.length;
+          elements.invalidPdfName.textContent = file.name;
+          elements.invalidPdfModal.show();
+          
+          // Add to list but mark as invalid
+          pdfFiles.push({ 
+            file, 
+            pages: 'all',
+            isEncrypted: false,
+            isValid: false,
+            error: error.message
+          });
+        }
       }
       
       if (validFiles > 0) {
-        showToast(`Added ${validFiles} PDF file(s)`, "success");
         updateFileDisplay();
+        checkLargeFilesWarning();
       }
+    }
+
+    function checkLargeFilesWarning() {
+      const totalSize = pdfFiles.reduce((sum, { file }) => sum + file.size, 0);
+      const showWarning = totalSize > 100 * 1024 * 1024; // Show for >100MB
+      elements.memoryWarning.style.display = showWarning ? 'block' : 'none';
     }
 
     // File List Display
     function updateFileDisplay() {
       elements.fileList.innerHTML = "";
       let totalSize = 0;
+      let validFiles = 0;
 
-      pdfFiles.forEach(({ file }, index) => {
+      pdfFiles.forEach(({ file, isEncrypted, isValid, error }, index) => {
         totalSize += file.size;
-        const fileItem = createFileItem(file, index);
+        if (isValid) validFiles++;
+        const fileItem = createFileItem(file, index, isEncrypted, isValid, error);
         elements.fileList.appendChild(fileItem);
       });
 
       elements.totalSize.textContent = `${(totalSize / 1024 / 1024).toFixed(1)} MB`;
-      elements.fileCount.textContent = pdfFiles.length;
+      elements.fileCount.textContent = `${validFiles} of ${pdfFiles.length}`;
     }
 
-    function createFileItem(file, index) {
+    function createFileItem(file, index, isEncrypted, isValid, error) {
       const div = document.createElement("div");
-      div.className = "file-item d-flex align-items-center gap-3";
+      let statusBadge = '';
+      let itemClass = '';
+      
+      if (!isValid) {
+        itemClass = 'error-file';
+        statusBadge = `<span class="badge bg-danger ms-2">Invalid</span>`;
+      } else if (isEncrypted) {
+        itemClass = 'encrypted-file';
+        statusBadge = `<span class="badge bg-primary ms-2">Encrypted</span>`;
+      }
+      
+      div.className = `file-item d-flex align-items-center gap-3 ${itemClass}`;
       div.innerHTML = `
         <span class="serial-number fw-bold">${index + 1}.</span>
         <div class="flex-grow-1">
           <div class="d-flex justify-content-between align-items-center">
-            <span class="file-name">${file.name}</span>
+            <div>
+              <span class="file-name">${file.name}</span>
+              ${statusBadge}
+            </div>
             <small class="text-muted ms-2">${(file.size / 1024 / 1024).toFixed(1)} MB</small>
           </div>
+          ${error ? `<small class="text-danger">Error: ${error}</small>` : ''}
         </div>
         <div class="btn-group">
           <button class="btn btn-sm btn-outline-secondary" onclick="moveFile(${index}, -1)" ${index === 0 ? 'disabled' : ''}>
@@ -891,7 +1098,7 @@
     // File Manipulation
     function moveFile(index, direction) {
       if (mergeInProgress) {
-        showToast("Please wait for current merge to complete", "warning");
+        showAlert("Merge in Progress", "Please wait for current merge to complete before rearranging files");
         return;
       }
       
@@ -903,13 +1110,14 @@
 
     function removeFile(index) {
       if (mergeInProgress) {
-        showToast("Please wait for current merge to complete", "warning");
+        showAlert("Merge in Progress", "Please wait for current merge to complete before removing files");
         return;
       }
       
+      const removedFile = pdfFiles[index].file;
       pdfFiles.splice(index, 1);
       updateFileDisplay();
-      showToast("PDF removed", "info");
+      checkLargeFilesWarning();
     }
 
     // Merge Functionality
@@ -917,17 +1125,20 @@
 
     async function mergeFiles() {
       if (mergeInProgress) {
-        showToast("Merge already in progress", "warning");
+        showAlert("Merge in Progress", "A merge operation is already in progress");
         return;
       }
       
-      if (pdfFiles.length < 1) {
-        showToast("Add at least one PDF to merge", "warning");
+      // Filter out invalid files
+      const validFiles = pdfFiles.filter(file => file.isValid);
+      
+      if (validFiles.length < 1) {
+        showAlert("No Valid Files", "Please add at least one valid PDF file to merge");
         return;
       }
 
-      if (pdfFiles.length === 1) {
-        showToast("Only one PDF selected - nothing to merge", "info");
+      if (validFiles.length === 1) {
+        showAlert("Nothing to Merge", "Only one valid PDF selected - nothing to merge");
         return;
       }
 
@@ -935,53 +1146,74 @@
         mergeInProgress = true;
         showLoading(true, "Preparing to merge files...");
         
-        const totalSize = pdfFiles.reduce((sum, { file }) => sum + file.size, 0);
+        const totalSize = validFiles.reduce((sum, { file }) => sum + file.size, 0);
         const estimatedTime = calculateEstimatedTime(totalSize);
-        elements.loadingDetails.textContent = `Processing ${pdfFiles.length} files (${(totalSize / 1024 / 1024).toFixed(1)} MB) - Estimated time: ${estimatedTime}`;
+        elements.loadingDetails.textContent = `Processing ${validFiles.length} files (${(totalSize / 1024 / 1024).toFixed(1)} MB) - Estimated time: ${estimatedTime}`;
         
-        const mergedPdf = await PDFLib.PDFDocument.create();
-        let processedPages = 0;
+        // Create a new PDF document
+        const { PDFDocument } = PDFLib;
+        const mergedPdf = await PDFDocument.create();
+        
+        // Track total pages for progress
         let totalPages = 0;
+        let processedPages = 0;
         
         // First pass to count total pages
-        for (const { file } of pdfFiles) {
+        for (const { file } of validFiles) {
           const arrayBuffer = await file.arrayBuffer();
-          const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
-          totalPages += pdf.getPageCount();
+          const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+          totalPages += pdfDoc.getPageCount();
         }
         
         // Second pass to actually merge
-        for (let i = 0; i < pdfFiles.length; i++) {
-          const { file } = pdfFiles[i];
+        for (let i = 0; i < validFiles.length; i++) {
+          const { file, isEncrypted } = validFiles[i];
           const fileName = file.name;
           
-          elements.loadingMessage.textContent = `Processing file ${i + 1} of ${pdfFiles.length}: ${fileName}`;
+          elements.loadingMessage.textContent = `Processing file ${i + 1} of ${validFiles.length}: ${fileName}`;
           elements.loadingDetails.textContent = `Pages processed: ${processedPages} of ${totalPages} (${Math.round((processedPages / totalPages) * 100)}%)`;
           
           try {
             const arrayBuffer = await file.arrayBuffer();
-            const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
-            const pageCount = pdf.getPageCount();
+            const pdfDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true });
+            const pageCount = pdfDoc.getPageCount();
             
-            const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-            copiedPages.forEach(page => mergedPdf.addPage(page));
+            // Copy each page individually to ensure proper formatting
+            const pageIndices = Array.from({ length: pageCount }, (_, i) => i);
+            const copiedPages = await mergedPdf.copyPages(pdfDoc, pageIndices);
             
-            processedPages += pageCount;
-            updateProgress((i + 1) / pdfFiles.length * 100);
+            for (const page of copiedPages) {
+              mergedPdf.addPage(page);
+              processedPages++;
+              
+              // Update progress more frequently for large files
+              if (pageCount > 10 && processedPages % 5 === 0) {
+                updateProgress((i + (processedPages / pageCount)) / validFiles.length * 100);
+              }
+            }
+            
+            updateProgress((i + 1) / validFiles.length * 100);
             
           } catch (error) {
             console.error(`Error processing file ${fileName}:`, error);
-            showToast(`Error processing ${fileName}: ${error.message}`, "danger");
+            showAlert("Processing Error", `Error processing ${fileName}: ${error.message}`);
           }
         }
         
         elements.loadingMessage.textContent = "Finalizing merged PDF...";
-        const mergedPdfBytes = await mergedPdf.save();
+        
+        // Save the merged PDF with proper formatting
+        const mergedPdfBytes = await mergedPdf.save({
+          useObjectStreams: false, // Better compatibility
+          addDefaultPage: false,   // Don't add empty page if no content
+          useCompression: true     // Reduce file size
+        });
+        
         handleMergeSuccess(mergedPdfBytes);
         
       } catch (error) {
         console.error("Merge error:", error);
-        showToast("Error merging files: " + error.message, "danger");
+        showAlert("Merge Failed", "Error merging files: " + error.message);
         
       } finally {
         mergeInProgress = false;
@@ -1047,7 +1279,7 @@
 
     function downloadFile(url, fileName) {
       download(url, fileName, "application/pdf");
-      showToast("Download started", "success");
+      showAlert("Download Started", `Your merged PDF "${fileName}" is being downloaded`);
     }
 
     function loadMergeHistory() {
@@ -1092,6 +1324,13 @@
       return li;
     }
 
+    // Alert System
+    function showAlert(title, message) {
+      elements.alertModalTitle.textContent = title;
+      elements.alertModalBody.textContent = message;
+      elements.alertModal.show();
+    }
+
     // Theme Toggle
     elements.themeToggle.addEventListener("click", toggleTheme);
 
@@ -1104,26 +1343,6 @@
       // Update icon
       const icon = elements.themeToggle.querySelector('i');
       icon.className = newTheme === 'dark' ? 'bi bi-sun-fill' : 'bi bi-moon-stars-fill';
-    }
-
-    // Toast System
-    function showToast(message, type = "info") {
-      const toast = document.createElement("div");
-      toast.className = `toast show align-items-center text-bg-${type} border-0 mb-2`;
-      toast.setAttribute('role', 'alert');
-      toast.innerHTML = `
-        <div class="d-flex">
-          <div class="toast-body">${message}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-        </div>
-      `;
-      document.getElementById("toastContainer").appendChild(toast);
-      
-      // Auto-remove after delay
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 150);
-      }, 3000);
     }
   </script>
 </body>

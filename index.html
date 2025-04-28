@@ -119,6 +119,36 @@
       margin-bottom: 1.2rem;
       line-height: 1.7;
     }
+    
+    /* Loading overlay styles */
+    .loading-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      color: white;
+    }
+    
+    .loading-spinner {
+      width: 3rem;
+      height: 3rem;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 1rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body class="bg-body">
@@ -702,9 +732,17 @@
     <div id="toastContainer" class="toast-container"></div>
   </div>
 
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <h4 id="loadingMessage">Merging PDF Files...</h4>
+    <p id="loadingDetails" class="small"></p>
+  </div>
+
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/downloadjs@1.4.7"></script>
   <script>
     // DOM Elements
     const elements = {
@@ -718,19 +756,20 @@
       progressWrapper: document.getElementById("progressBarWrapper"),
       historyList: document.getElementById("historyList"),
       themeToggle: document.querySelector('.theme-toggle'),
-      currentYear: document.getElementById('currentYear')
+      currentYear: document.getElementById('currentYear'),
+      loadingOverlay: document.getElementById('loadingOverlay'),
+      loadingMessage: document.getElementById('loadingMessage'),
+      loadingDetails: document.getElementById('loadingDetails')
     };
 
     // State
     let pdfFiles = [];
+    let mergeInProgress = false;
 
     // Initialize
     document.addEventListener("DOMContentLoaded", () => {
       elements.currentYear.textContent = new Date().getFullYear();
-      const savedHistory = JSON.parse(localStorage.getItem("pdfHistory")) || [];
-      savedHistory.forEach(item => {
-        elements.historyList.appendChild(createHistoryItem(item));
-      });
+      loadMergeHistory();
       
       // Set theme from localStorage or prefer-color-scheme
       const savedTheme = localStorage.getItem("theme") || 
@@ -770,11 +809,28 @@
     }
 
     async function processFiles(files) {
+      if (mergeInProgress) {
+        showToast("Please wait for current merge to complete", "warning");
+        return;
+      }
+      
       let validFiles = 0;
+      const maxFiles = 100; // Reasonable limit to prevent UI issues
+      
+      if (files.length + pdfFiles.length > maxFiles) {
+        showToast(`Cannot add more than ${maxFiles} files at once`, "warning");
+        files = files.slice(0, maxFiles - pdfFiles.length);
+      }
       
       for (const file of files) {
         if (file.type !== "application/pdf") {
           showToast(`Skipped non-PDF file: ${file.name}`, "warning");
+          continue;
+        }
+        
+        // Check for duplicate files
+        if (pdfFiles.some(f => f.file.name === file.name && f.file.size === file.size && f.file.lastModified === file.lastModified)) {
+          showToast(`Skipped duplicate file: ${file.name}`, "info");
           continue;
         }
         
@@ -834,6 +890,11 @@
 
     // File Manipulation
     function moveFile(index, direction) {
+      if (mergeInProgress) {
+        showToast("Please wait for current merge to complete", "warning");
+        return;
+      }
+      
       const newIndex = index + direction;
       if (newIndex < 0 || newIndex >= pdfFiles.length) return;
       [pdfFiles[index], pdfFiles[newIndex]] = [pdfFiles[newIndex], pdfFiles[index]];
@@ -841,6 +902,11 @@
     }
 
     function removeFile(index) {
+      if (mergeInProgress) {
+        showToast("Please wait for current merge to complete", "warning");
+        return;
+      }
+      
       pdfFiles.splice(index, 1);
       updateFileDisplay();
       showToast("PDF removed", "info");
@@ -850,30 +916,87 @@
     elements.mergeBtn.addEventListener("click", mergeFiles);
 
     async function mergeFiles() {
+      if (mergeInProgress) {
+        showToast("Merge already in progress", "warning");
+        return;
+      }
+      
       if (pdfFiles.length < 1) {
         showToast("Add at least one PDF to merge", "warning");
         return;
       }
 
-      showProgress(true);
-      const mergedPdf = await PDFLib.PDFDocument.create();
+      if (pdfFiles.length === 1) {
+        showToast("Only one PDF selected - nothing to merge", "info");
+        return;
+      }
 
       try {
-        for (let i = 0; i < pdfFiles.length; i++) {
-          const { file } = pdfFiles[i];
+        mergeInProgress = true;
+        showLoading(true, "Preparing to merge files...");
+        
+        const totalSize = pdfFiles.reduce((sum, { file }) => sum + file.size, 0);
+        const estimatedTime = calculateEstimatedTime(totalSize);
+        elements.loadingDetails.textContent = `Processing ${pdfFiles.length} files (${(totalSize / 1024 / 1024).toFixed(1)} MB) - Estimated time: ${estimatedTime}`;
+        
+        const mergedPdf = await PDFLib.PDFDocument.create();
+        let processedPages = 0;
+        let totalPages = 0;
+        
+        // First pass to count total pages
+        for (const { file } of pdfFiles) {
           const arrayBuffer = await file.arrayBuffer();
           const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
-          const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-          copiedPages.forEach(page => mergedPdf.addPage(page));
-          updateProgress((i + 1) / pdfFiles.length * 100);
+          totalPages += pdf.getPageCount();
         }
-
+        
+        // Second pass to actually merge
+        for (let i = 0; i < pdfFiles.length; i++) {
+          const { file } = pdfFiles[i];
+          const fileName = file.name;
+          
+          elements.loadingMessage.textContent = `Processing file ${i + 1} of ${pdfFiles.length}: ${fileName}`;
+          elements.loadingDetails.textContent = `Pages processed: ${processedPages} of ${totalPages} (${Math.round((processedPages / totalPages) * 100)}%)`;
+          
+          try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await PDFLib.PDFDocument.load(arrayBuffer);
+            const pageCount = pdf.getPageCount();
+            
+            const copiedPages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+            copiedPages.forEach(page => mergedPdf.addPage(page));
+            
+            processedPages += pageCount;
+            updateProgress((i + 1) / pdfFiles.length * 100);
+            
+          } catch (error) {
+            console.error(`Error processing file ${fileName}:`, error);
+            showToast(`Error processing ${fileName}: ${error.message}`, "danger");
+          }
+        }
+        
+        elements.loadingMessage.textContent = "Finalizing merged PDF...";
         const mergedPdfBytes = await mergedPdf.save();
         handleMergeSuccess(mergedPdfBytes);
+        
       } catch (error) {
+        console.error("Merge error:", error);
         showToast("Error merging files: " + error.message, "danger");
+        
+      } finally {
+        mergeInProgress = false;
+        showLoading(false);
         showProgress(false);
       }
+    }
+
+    function calculateEstimatedTime(totalSizeBytes) {
+      const sizeMB = totalSizeBytes / 1024 / 1024;
+      if (sizeMB < 5) return "a few seconds";
+      if (sizeMB < 20) return "less than a minute";
+      if (sizeMB < 100) return "1-2 minutes";
+      if (sizeMB < 500) return "2-5 minutes";
+      return "several minutes (please be patient)";
     }
 
     // Progress Handling
@@ -884,6 +1007,15 @@
     function updateProgress(percentage) {
       elements.progressBar.style.width = `${percentage}%`;
       elements.progressBar.textContent = `${Math.floor(percentage)}%`;
+    }
+
+    function showLoading(show, message = "") {
+      if (show) {
+        elements.loadingMessage.textContent = message;
+        elements.loadingOverlay.style.display = "flex";
+      } else {
+        elements.loadingOverlay.style.display = "none";
+      }
     }
 
     // Merge Success Handling
@@ -910,26 +1042,27 @@
         bootstrap.Modal.getInstance(document.getElementById("renameModal")).hide();
       };
       
-      showProgress(false);
       new bootstrap.Modal(document.getElementById("renameModal")).show();
     }
 
     function downloadFile(url, fileName) {
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      download(url, fileName, "application/pdf");
       showToast("Download started", "success");
+    }
+
+    function loadMergeHistory() {
+      const savedHistory = JSON.parse(localStorage.getItem("pdfHistory")) || [];
+      savedHistory.forEach(item => {
+        elements.historyList.appendChild(createHistoryItem(item));
+      });
     }
 
     function updateHistory(fileName) {
       const historyItem = {
         name: fileName,
         date: new Date().toLocaleString(),
-        size: pdfFiles.reduce((sum, { file }) => sum + file.size, 0)
+        size: pdfFiles.reduce((sum, { file }) => sum + file.size, 0),
+        pageCount: pdfFiles.length
       };
       
       const historyElement = createHistoryItem(historyItem);
@@ -940,7 +1073,7 @@
       localStorage.setItem("pdfHistory", JSON.stringify(history.slice(0, 10)));
     }
 
-    function createHistoryItem({ name, date, size }) {
+    function createHistoryItem({ name, date, size, pageCount }) {
       const li = document.createElement("li");
       li.className = "list-group-item d-flex justify-content-between align-items-center";
       li.innerHTML = `
@@ -951,7 +1084,10 @@
             <small class="text-muted">${date}</small>
           </div>
         </div>
-        <small class="text-muted">${(size / 1024 / 1024).toFixed(1)} MB</small>
+        <div class="text-end">
+          <small class="text-muted d-block">${(size / 1024 / 1024).toFixed(1)} MB</small>
+          <small class="text-muted">${pageCount} files</small>
+        </div>
       `;
       return li;
     }
